@@ -1,5 +1,3 @@
-
-
 import os
 import time
 import pygame
@@ -12,6 +10,10 @@ import qrcode
 from PIL import Image
 from io import BytesIO
 import socketio
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Initialize translator and audio system
 translator = Translator()
@@ -25,7 +27,8 @@ def get_language_code(language_name):
 
 def generate_qr(username):
     try:
-        local_ip = socket.gethostbyname(socket.gethostname())
+        # Use external IP if available, fallback to local IP
+        local_ip = os.getenv("LOCAL_IP", socket.gethostbyname(socket.gethostname()))
         qr_link = f"http://{local_ip}:8501/?listener={username}"
         qr = qrcode.make(qr_link)
         qr_img = BytesIO()
@@ -38,8 +41,8 @@ def generate_qr(username):
 
 def text_to_voice(text_data, to_language):
     try:
-        myobj = gTTS(text=text_data, lang=to_language, slow=False)
-        myobj.save("cache_file.mp3")
+        tts = gTTS(text=text_data, lang=to_language, slow=False)
+        tts.save("cache_file.mp3")
         audio = pygame.mixer.Sound("cache_file.mp3")
         audio.play()
         os.remove("cache_file.mp3")
@@ -70,8 +73,8 @@ def disconnect_from_server():
 @sio.on('hear')
 def handle_hear(data):
     try:
-        translated_text = data['translated_text']
-        to_language = data['to_language']
+        translated_text = data.get('translated_text', '')
+        to_language = data.get('to_language', 'en')
         st.write(f"Translated: {translated_text} ({to_language})")
         text_to_voice(translated_text, to_language)
     except Exception as e:
